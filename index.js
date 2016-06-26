@@ -1,0 +1,119 @@
+/* genApi - generate simple Javascript API from Swagger spec suitable for use with OpenNitro SDK
+*/
+
+var fs = require('fs');
+
+var map = [];
+
+String.prototype.toCamelCase = function camelize() {
+	return this.toLowerCase().replace(/[-_ \/\.](.)/g, function(match, group1) {
+		return group1.toUpperCase();
+    });
+}
+
+function uniq(s) {
+	var result = s;
+	count = 2;
+	while (map.indexOf(result)>=0) {
+		result = s + count;
+		count++;
+	}
+	return result;
+}
+
+module.exports = {
+
+	swagger2jsSdk : function(infile,outfile) {
+
+		var swagger = require(infile);
+		var actions = ['get','head','post','put','delete','patch','options','trace','connect'];
+		var out = '';
+
+		for (var sp in swagger.parameters) {
+			var swagParam = swagger.parameters[sp];
+			if (swagParam['in'] == 'query') {
+				out += 'const common'+('/'+swagParam.name).toCamelCase() + " = '" + swagParam.name + "';\n";
+				if (swagParam['enum']) {
+					for (var e in swagParam['enum']) {
+						var value = swagParam['enum'][e];
+						out += 'const common'+('/'+swagParam.name+'/'+value).toCamelCase() +
+							" = '" + swagParam.name + "=" + value + "';\n";
+					}
+				}
+			}
+		}
+
+		for (var p in swagger.paths) {
+			var path = swagger.paths[p];
+			for (var a in actions) {
+				var action = path[actions[a]];
+				if (action) {
+					out += '\n/* '+(action.description ? action.description : action.summary)+' */\n';
+					pRoot = p.replace('.atom','');
+					pRoot = pRoot.replace('.xml','');
+					pRoot = pRoot.replace('.json','');
+
+					var pName = (actions[a]+pRoot).toCamelCase();
+					var pName = uniq(pName);
+
+					if (p.indexOf('{')>=0) {
+						var params = [];
+						var p2 = pRoot.replace(/(\{.+?\})/g,function(match,group1){
+							params.push(group1.replace('{','').replace('}',''));
+							return '';
+						});
+						p2 = p2.replace('-/','/');
+
+						pName = (actions[a]+p2).replace('//','/').toCamelCase();
+						if (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
+						if (pName[pName.length-1] == '-') pName = pName.substr(0,pName.length-1);
+						pName = uniq(pName);
+
+						out += 'function '+pName+'(';
+						for (var arg in params) {
+							if (params[arg].substr(0,1).match(/[0-9]/)) {
+								params[arg] = '_'+params[arg];
+							}
+							out += (arg > 0 ? ',' : '') + params[arg].toCamelCase();
+						}
+						out += '){\n';
+						out += "  var p = '" + swagger.basePath + p + "';\n";
+						for (var arg in params) {
+							out += "  p = p.replace('{" + params[arg] + "}'," + params[arg].toCamelCase() + ");\n";
+						}
+						out += '  return p;\n';
+						out += '}\n';
+					}
+					else {
+						out += 'const '+pName+" = '"+swagger.basePath+p+"';\n";
+					}
+					map.push(pName);
+
+					for (var sp in action.parameters) {
+						var swagParam = action.parameters[sp];
+						if (swagParam['in'] == 'query') {
+							out += 'const '+pName+('/'+swagParam.name).toCamelCase() + " = '" + swagParam.name + "';\n";
+							if (swagParam['enum']) {
+								for (var e in swagParam['enum']) {
+									var value = swagParam['enum'][e];
+									out += 'const '+pName+('/'+swagParam.name+'/'+value).toCamelCase() +
+										" = '" + swagParam.name + "=" + value + "';\n";
+								}
+							}
+						}
+					}
+
+				}
+			}
+		}
+
+		out += '\nmodule.exports = {\n';
+		for (var m in map) {
+			out += '  ' + map[m] + ' : ' + map[m] + ',\n';
+		}
+		out += "  host : '" + swagger.host + "'\n";
+		out += '};\n';
+
+		fs.writeFileSync(outfile,out,'utf8');
+	}
+};
