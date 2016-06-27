@@ -72,8 +72,8 @@ module.exports = {
 						p2 = p2.replace('-/','/');
 
 						pName = (actions[a]+p2).replace('//','/').toCamelCase();
-						if (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
 						if (pName[pName.length-1] == '-') pName = pName.substr(0,pName.length-1);
+						while (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
 						pName = uniq(pName);
 
 						out += 'function '+pName+'(';
@@ -98,13 +98,15 @@ module.exports = {
 
 					for (var sp in action.parameters) {
 						var swagParam = action.parameters[sp];
-						if (swagParam['in'] == 'query') {
-							out += 'const '+pName+('/'+swagParam.name).toCamelCase() + " = '" + swagParam.name + "';\n";
+						if ((swagParam['in'] == 'query') || (swagParam["enum"])) {
+							if (swagParam['in'] == 'query') {
+								out += 'const '+pName+('/'+swagParam.name).toCamelCase() + " = '" + swagParam.name + "';\n";
+							}
 							if (swagParam['enum']) {
 								for (var e in swagParam['enum']) {
 									var value = swagParam['enum'][e];
 									out += 'const '+pName+('/'+swagParam.name+'/'+value).toCamelCase() +
-										" = '" + swagParam.name + "=" + value + "';\n";
+										" = '" + (swagParam['in'] == 'query' ? swagParam.name + "=" : '') + value + "';\n";
 								}
 							}
 						}
