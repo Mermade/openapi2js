@@ -1,7 +1,8 @@
-/* genApi - generate simple Javascript API from Swagger spec suitable for use with OpenNitro SDK
+/* openAPI2js - generate simple Javascript API from Swagger spec suitable for use with OpenNitro SDK
 */
 
 var fs = require('fs');
+var path = require('path');
 
 var map = [];
 
@@ -23,9 +24,15 @@ function uniq(s) {
 
 module.exports = {
 
-	swagger2jsSdk : function(infile,outfile) {
+	openAPI2js : function(input,outfile) {
 
-		var swagger = require(infile);
+		var swagger = {};
+		if (typeof input === 'object') {
+			swagger = input;
+		}
+		else {
+			swagger = require(path.resolve(input));
+		}
 		var actions = ['get','head','post','put','delete','patch','options','trace','connect'];
 		var out = '';
 
@@ -44,9 +51,9 @@ module.exports = {
 		}
 
 		for (var p in swagger.paths) {
-			var path = swagger.paths[p];
+			var sPath = swagger.paths[p];
 			for (var a in actions) {
-				var action = path[actions[a]];
+				var action = sPath[actions[a]];
 				if (action) {
 					out += '\n/* '+(action.description ? action.description : action.summary)+' */\n';
 					pRoot = p.replace('.atom','');
@@ -114,6 +121,8 @@ module.exports = {
 		out += "  host : '" + swagger.host + "'\n";
 		out += '};\n';
 
-		fs.writeFileSync(outfile,out,'utf8');
+		if (outfile) fs.writeFileSync(outfile,out,'utf8');
+
+		return out;
 	}
 };
