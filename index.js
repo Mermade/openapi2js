@@ -12,6 +12,11 @@ String.prototype.toCamelCase = function camelize() {
     });
 }
 
+String.prototype.replaceAll = function(search, replacement) {
+    var target = this;
+    return target.split(search).join(replacement);
+};
+
 function uniq(s) {
 	var result = s;
 	count = 2;
@@ -71,7 +76,7 @@ module.exports = {
 						});
 						p2 = p2.replace('-/','/');
 
-						pName = (actions[a]+p2).replace('//','/').toCamelCase();
+						pName = (actions[a]+p2).replaceAll('//','/').toCamelCase();
 						if (pName[pName.length-1] == '-') pName = pName.substr(0,pName.length-1);
 						while (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
 						pName = uniq(pName);
