@@ -13,8 +13,12 @@ String.prototype.toCamelCase = function camelize() {
 }
 
 String.prototype.replaceAll = function(search, replacement) {
-    var target = this;
-    return target.split(search).join(replacement);
+	var result = this;
+	while (true) {
+		result = result.split(search).join(replacement);
+		if (result.indexOf(search)<0) break;
+	}
+	return result;
 };
 
 function uniq(s) {
@@ -81,7 +85,6 @@ module.exports = {
 						pName = (actions[a]+p2).replaceAll('//','/').toCamelCase();
 						if (pName[pName.length-1] == '-') pName = pName.substr(0,pName.length-1);
 						while (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
-						pName = pName.replaceAll('/','');
 						pName = uniq(pName);
 
 						out += 'function '+pName+'(';
