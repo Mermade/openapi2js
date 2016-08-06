@@ -44,7 +44,8 @@ module.exports = {
 		for (var sp in swagger.parameters) {
 			var swagParam = swagger.parameters[sp];
 			if (swagParam['in'] == 'query') {
-				out += 'const common'+('/'+swagParam.name).toCamelCase() + " = '" + swagParam.name + "';\n";
+				var cName = 'common'+('/'+swagParam.name).toCamelCase();
+				out += 'const ' + cName + " = '" + swagParam.name + "';\n";
 				if (swagParam['enum']) {
 					for (var e in swagParam['enum']) {
 						var value = swagParam['enum'][e];
@@ -52,6 +53,7 @@ module.exports = {
 							" = '" + swagParam.name + "=" + value + "';\n";
 					}
 				}
+				map.push(cName);
 			}
 		}
 
@@ -60,7 +62,7 @@ module.exports = {
 			for (var a in actions) {
 				var action = sPath[actions[a]];
 				if (action) {
-					out += '\n/* '+(action.description ? action.description : action.summary)+' */\n';
+					out += '\n/* '+(action.description ? action.description : action.summary ? action.summary : 'No description')+' */\n';
 					pRoot = p.replace('.atom','');
 					pRoot = pRoot.replace('.xml','');
 					pRoot = pRoot.replace('.json','');
@@ -79,6 +81,7 @@ module.exports = {
 						pName = (actions[a]+p2).replaceAll('//','/').toCamelCase();
 						if (pName[pName.length-1] == '-') pName = pName.substr(0,pName.length-1);
 						while (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
+						pName = pName.replaceAll('/','');
 						pName = uniq(pName);
 
 						out += 'function '+pName+'(';
@@ -89,7 +92,7 @@ module.exports = {
 							out += (arg > 0 ? ',' : '') + params[arg].toCamelCase();
 						}
 						out += '){\n';
-						out += "  var p = '" + swagger.basePath + p + "';\n";
+						out += "  var p = '" + (swagger.basePath + p).replaceAll('//','/') + "';\n";
 						for (var arg in params) {
 							out += "  p = p.replace('{" + params[arg] + "}'," + params[arg].toCamelCase() + ");\n";
 						}
