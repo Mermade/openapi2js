@@ -47,6 +47,9 @@ module.exports = {
 
 		for (var sp in swagger.parameters) {
 			var swagParam = swagger.parameters[sp];
+			if (swagParam.description) {
+				out += '/* ' + swagParam.description + ' */\n';
+			}
 			if (swagParam['in'] == 'query') {
 				var cName = 'common'+('/'+swagParam.name).toCamelCase();
 				out += 'const ' + cName + " = '" + swagParam.name + "';\n";
@@ -116,6 +119,9 @@ module.exports = {
 					for (var sp in action.parameters) {
 						var swagParam = action.parameters[sp];
 						if ((swagParam['in'] == 'query') || (swagParam["enum"])) {
+							if (swagParam.description) {
+								out += '/* ' + swagParam.description + ' */\n';
+							}
 							if (swagParam['in'] == 'query') {
 								out += 'const '+pName+('/'+swagParam.name).toCamelCase() + " = '" + swagParam.name + "';\n";
 							}
