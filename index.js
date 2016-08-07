@@ -50,14 +50,20 @@ module.exports = {
 			if (swagParam['in'] == 'query') {
 				var cName = 'common'+('/'+swagParam.name).toCamelCase();
 				out += 'const ' + cName + " = '" + swagParam.name + "';\n";
-				if (swagParam['enum']) {
-					for (var e in swagParam['enum']) {
-						var value = swagParam['enum'][e];
-						out += 'const common'+('/'+swagParam.name+'/'+value).toCamelCase() +
-							" = '" + swagParam.name + "=" + value + "';\n";
-					}
-				}
 				map.push(cName);
+			}
+			if (swagParam['enum']) {
+				for (var e in swagParam['enum']) {
+					var value = swagParam['enum'][e];
+					var eName = 'common'+('/'+swagParam.name+'/'+value).toCamelCase();
+					if (swagParam['in'] == 'query') {
+						out += 'const ' + eName + " = '" + swagParam.name + "=" + value + "';\n";
+					}
+					else {
+						out += 'const ' + eName + " = '" + value + "';\n";
+					}
+					map.push(eName);
+				}
 			}
 		}
 
