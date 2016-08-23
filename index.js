@@ -12,6 +12,12 @@ String.prototype.toCamelCase = function camelize() {
     });
 }
 
+function sanitise(s,brackets) {
+	s = s.replaceAll('\'','').replaceAll('(','').replaceAll(')','').replaceAll(';','');
+	if (brackets) s = s.replaceAll('{','').replaceAll('}','');
+	return s;
+}
+
 String.prototype.replaceAll = function(search, replacement) {
 	var result = this;
 	while (true) {
@@ -94,7 +100,7 @@ module.exports = {
 						pName = (actions[a]+p2).replaceAll('//','/').toCamelCase();
 						if (pName[pName.length-1] == '-') pName = pName.substr(0,pName.length-1);
 						while (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
-						pName = uniq(pName);
+						pName = uniq(sanitise(pName,true));
 
 						out += 'function '+pName+'(';
 						for (var arg in params) {
@@ -104,7 +110,7 @@ module.exports = {
 							out += (arg > 0 ? ',' : '') + params[arg].toCamelCase();
 						}
 						out += '){\n';
-						out += "  var p = '" + (swagger.basePath + p).replaceAll('//','/') + "';\n";
+						out += "  var p = '" + sanitise((swagger.basePath + p).replaceAll('//','/'),false) + "';\n";
 						for (var arg in params) {
 							out += "  p = p.replace('{" + params[arg] + "}'," + params[arg].toCamelCase() + ");\n";
 						}
@@ -118,18 +124,22 @@ module.exports = {
 
 					for (var sp in action.parameters) {
 						var swagParam = action.parameters[sp];
+						if (swagParam.description) {
+							out += '/* ' + swagParam.description + ' */\n';
+						}
 						if ((swagParam['in'] == 'query') || (swagParam["enum"])) {
-							if (swagParam.description) {
-								out += '/* ' + swagParam.description + ' */\n';
-							}
 							if (swagParam['in'] == 'query') {
-								out += 'const '+pName+('/'+swagParam.name).toCamelCase() + " = '" + swagParam.name + "';\n";
+								var cName = pName+('/'+swagParam.name).toCamelCase();
+								out += 'const '+ cName + " = '" + swagParam.name + "';\n";
+								map.push(cName);
 							}
 							if (swagParam['enum']) {
 								for (var e in swagParam['enum']) {
 									var value = swagParam['enum'][e];
-									out += 'const '+pName+('/'+swagParam.name+'/'+value).toCamelCase() +
+									var eName = pName+('/'+swagParam.name+'/'+value).toCamelCase();
+									out += 'const '+ eName +
 										" = '" + (swagParam['in'] == 'query' ? swagParam.name + "=" : '') + value + "';\n";
+									map.push(eName);
 								}
 							}
 						}
