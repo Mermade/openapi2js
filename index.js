@@ -51,10 +51,16 @@ module.exports = {
 		var actions = ['get','head','post','put','delete','patch','options','trace','connect'];
 		var out = '';
 
+		out += '/**\n';
+		out += '@author openapi2js http://github.com/mermade/openapi2js\n';
+		out += '@copyright Copyright (c) 2016 Mike Ralphson\n';
+		out += '@license https://opensource.org/licenses/BSD-3-Clause\n';
+		out += '*/\n';
+
 		for (var sp in swagger.parameters) {
 			var swagParam = swagger.parameters[sp];
-			if (swagParam.description) {
-				out += '/* ' + swagParam.description + ' */\n';
+			if (swagParam.description && ((swagParam['in'] == 'query') || (swagParam['enum']))) {
+				out += '/** ' + swagParam.description + ' */\n';
 			}
 			if (swagParam['in'] == 'query') {
 				var cName = 'common'+('/'+swagParam.name).toCamelCase();
@@ -81,7 +87,9 @@ module.exports = {
 			for (var a in actions) {
 				var action = sPath[actions[a]];
 				if (action) {
-					out += '\n/* '+(action.description ? action.description : action.summary ? action.summary : 'No description')+' */\n';
+					var isFunc = (p.indexOf('{')>=0);
+
+					out += '\n/' + (isFunc ? '**' : '*') + ' '+(action.description ? action.description : action.summary ? action.summary : 'No description');
 					pRoot = p.replace('.atom','');
 					pRoot = pRoot.replace('.xml','');
 					pRoot = pRoot.replace('.json','');
@@ -89,7 +97,7 @@ module.exports = {
 					var pName = (actions[a]+pRoot).toCamelCase();
 					var pName = uniq(pName);
 
-					if (p.indexOf('{')>=0) {
+					if (isFunc) {
 						var params = [];
 						var p2 = pRoot.replace(/(\{.+?\})/g,function(match,group1){
 							params.push(group1.replace('{','').replace('}',''));
@@ -97,12 +105,35 @@ module.exports = {
 						});
 						p2 = p2.replace('-/','/');
 
+						for (var arg in params) {
+
+							var pType = 'string';
+							var pDesc = 'No description';
+
+							for (var sp in action.parameters) {
+								var sParam = action.parameters[sp];
+								if (sParam["$ref"]) {
+									cParamName = sParam["$ref"].replace('#/parameters/','');
+									sParam = swagger.parameters[cParamName];
+								}
+
+								if (sParam.name == params[arg]) {
+									pType = sParam.type;
+									pDesc = sParam.description;
+								}
+							}
+
+							out += '\n@' + params[arg] + ' {' + pType + '} ' + pDesc;
+						}
+
+						out += '\n@return {string} The path to request\n';
+
 						pName = (actions[a]+p2).replaceAll('//','/').toCamelCase();
 						if (pName[pName.length-1] == '-') pName = pName.substr(0,pName.length-1);
 						while (pName[pName.length-1] == '/') pName = pName.substr(0,pName.length-1);
 						pName = uniq(sanitise(pName,true));
 
-						out += 'function '+pName+'(';
+						out += '*/\nfunction '+pName+'(';
 						for (var arg in params) {
 							if (params[arg].substr(0,1).match(/[0-9]/)) {
 								params[arg] = '_'+params[arg];
@@ -118,16 +149,16 @@ module.exports = {
 						out += '}\n';
 					}
 					else {
-						out += 'const '+pName+" = '"+swagger.basePath+p+"';\n";
+						out += '*/\nconst '+pName+" = '"+(swagger.basePath+p).replace('//','/')+"';\n";
 					}
 					map.push(pName);
 
 					for (var sp in action.parameters) {
 						var swagParam = action.parameters[sp];
-						if (swagParam.description) {
-							out += '/* ' + swagParam.description + ' */\n';
-						}
 						if ((swagParam['in'] == 'query') || (swagParam["enum"])) {
+							if (swagParam.description) {
+								out += '/** ' + swagParam.description + ' */\n';
+							}
 							if (swagParam['in'] == 'query') {
 								var cName = pName+('/'+swagParam.name).toCamelCase();
 								out += 'const '+ cName + " = '" + swagParam.name + "';\n";
