@@ -1,6 +1,6 @@
 {
   "name": "openapi2js",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Convert OpenAPI (swagger) 2.0 json spec to simple JS API",
   "main": "index.js",
   "scripts": {
