@@ -11,6 +11,7 @@
     "openapi",
     "js",
     "sdk",
+	"jsdoc",
     "javascript"
   ],
   "author": "Mike Ralphson",

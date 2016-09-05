@@ -1,6 +1,6 @@
 # OpenAPI2js
 
-Convert OpenApi (Swagger) 2.0 JSON spec to simple JS API, suitable for use with the Open Nitro SDK
+Convert OpenApi (Swagger) 2.0 JSON spec to simple Javascript API, complete with JSDOC, suitable for use with the Open Nitro SDK
 
 ## Usage:
 
