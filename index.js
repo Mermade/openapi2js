@@ -1,6 +1,8 @@
 /* openAPI2js - generate simple Javascript API from Swagger spec suitable for use with OpenNitro SDK
 */
 
+// TODO parameters at PATH level
+
 var fs = require('fs');
 var path = require('path');
 
@@ -10,7 +12,7 @@ String.prototype.toCamelCase = function camelize() {
 	return this.toLowerCase().replace(/[-_ \/\.](.)/g, function(match, group1) {
 		return group1.toUpperCase();
     });
-}
+};
 
 function sanitise(s,brackets) {
 	s = s.replaceAll('\'','').replaceAll('(','').replaceAll(')','').replaceAll(';','');
@@ -123,7 +125,7 @@ module.exports = {
 								}
 							}
 
-							out += '\n@' + params[arg] + ' {' + pType + '} ' + pDesc;
+							out += '\n@param {' + pType + '} ' + params[arg] + ' ' + pDesc;
 						}
 
 						out += '\n@return {string} The path to request\n';
