@@ -89,9 +89,7 @@ module.exports = {
 			for (var a in actions) {
 				var action = sPath[actions[a]];
 				if (action) {
-					var isFunc = (p.indexOf('{')>=0);
-
-					out += '\n/' + (isFunc ? '**' : '*') + ' '+(action.description ? action.description : action.summary ? action.summary : 'No description');
+					out += '\n/** '+(action.description ? action.description : action.summary ? action.summary : 'No description');
 					pRoot = p.replace('.atom','');
 					pRoot = pRoot.replace('.xml','');
 					pRoot = pRoot.replace('.json','');
@@ -99,7 +97,7 @@ module.exports = {
 					var pName = (actions[a]+pRoot).toCamelCase();
 					var pName = uniq(pName);
 
-					if (isFunc) {
+					if (p.indexOf('{')>=0) {
 						var params = [];
 						var p2 = pRoot.replace(/(\{.+?\})/g,function(match,group1){
 							params.push(group1.replace('{','').replace('}',''));
