@@ -1,8 +1,6 @@
 /* openAPI2js - generate simple Javascript API from Swagger spec suitable for use with OpenNitro SDK
 */
 
-// TODO parameters at PATH level
-
 var fs = require('fs');
 var path = require('path');
 
@@ -39,6 +37,35 @@ function uniq(s) {
 	return result;
 }
 
+function extractParameters(container,prefix) {
+	var out = '';
+	for (var sp in container) {
+		var swagParam = container[sp];
+		if (swagParam.description && ((swagParam['in'] == 'query') || (swagParam['enum']))) {
+			out += '/** ' + swagParam.description + ' */\n';
+		}
+		if (swagParam['in'] == 'query') {
+			var cName = prefix+('/'+swagParam.name).toCamelCase();
+			out += 'const ' + cName + " = '" + swagParam.name + "';\n";
+			map.push(cName);
+		}
+		if (swagParam['enum']) {
+			for (var e in swagParam['enum']) {
+				var value = swagParam['enum'][e];
+				var eName = prefix+('/'+swagParam.name+'/'+value).toCamelCase();
+				if (swagParam['in'] == 'query') {
+					out += 'const ' + eName + " = '" + swagParam.name + "=" + value + "';\n";
+				}
+				else {
+					out += 'const ' + eName + " = '" + value + "';\n";
+				}
+				map.push(eName);
+			}
+		}
+	}
+	return out;
+}
+
 module.exports = {
 
 	openAPI2js : function(input,outfile) {
@@ -59,43 +86,26 @@ module.exports = {
 		out += '@license https://opensource.org/licenses/BSD-3-Clause\n';
 		out += '*/\n';
 
-		for (var sp in swagger.parameters) {
-			var swagParam = swagger.parameters[sp];
-			if (swagParam.description && ((swagParam['in'] == 'query') || (swagParam['enum']))) {
-				out += '/** ' + swagParam.description + ' */\n';
-			}
-			if (swagParam['in'] == 'query') {
-				var cName = 'common'+('/'+swagParam.name).toCamelCase();
-				out += 'const ' + cName + " = '" + swagParam.name + "';\n";
-				map.push(cName);
-			}
-			if (swagParam['enum']) {
-				for (var e in swagParam['enum']) {
-					var value = swagParam['enum'][e];
-					var eName = 'common'+('/'+swagParam.name+'/'+value).toCamelCase();
-					if (swagParam['in'] == 'query') {
-						out += 'const ' + eName + " = '" + swagParam.name + "=" + value + "';\n";
-					}
-					else {
-						out += 'const ' + eName + " = '" + value + "';\n";
-					}
-					map.push(eName);
-				}
-			}
-		}
+		out += extractParameters(swagger.parameters,'common');
 
 		for (var p in swagger.paths) {
+			pRoot = p.replace('.atom','');
+			pRoot = pRoot.replace('.xml','');
+			pRoot = pRoot.replace('.json','');
 			var sPath = swagger.paths[p];
+
+			var pName = ('all'+pRoot).toCamelCase();
+			pName = uniq(pName);
+
+			out += extractParameters(sPath.parameters,pName);
+
 			for (var a in actions) {
 				var action = sPath[actions[a]];
 				if (action) {
 					out += '\n/** '+(action.description ? action.description : action.summary ? action.summary : 'No description');
-					pRoot = p.replace('.atom','');
-					pRoot = pRoot.replace('.xml','');
-					pRoot = pRoot.replace('.json','');
 
-					var pName = (actions[a]+pRoot).toCamelCase();
-					var pName = uniq(pName);
+					pName = (actions[a]+pRoot).toCamelCase();
+					pName = uniq(pName);
 
 					if (p.indexOf('{')>=0) {
 						var params = [];
@@ -153,29 +163,7 @@ module.exports = {
 					}
 					map.push(pName);
 
-					for (var sp in action.parameters) {
-						var swagParam = action.parameters[sp];
-						if ((swagParam['in'] == 'query') || (swagParam["enum"])) {
-							if (swagParam.description) {
-								out += '/** ' + swagParam.description + ' */\n';
-							}
-							if (swagParam['in'] == 'query') {
-								var cName = pName+('/'+swagParam.name).toCamelCase();
-								out += 'const '+ cName + " = '" + swagParam.name + "';\n";
-								map.push(cName);
-							}
-							if (swagParam['enum']) {
-								for (var e in swagParam['enum']) {
-									var value = swagParam['enum'][e];
-									var eName = pName+('/'+swagParam.name+'/'+value).toCamelCase();
-									out += 'const '+ eName +
-										" = '" + (swagParam['in'] == 'query' ? swagParam.name + "=" : '') + value + "';\n";
-									map.push(eName);
-								}
-							}
-						}
-					}
-
+					out += extractParameters(action.parameters,pName);
 				}
 			}
 		}
