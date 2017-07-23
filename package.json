@@ -1,7 +1,7 @@
 {
   "name": "openapi2js",
   "version": "1.0.10",
-  "description": "Convert OpenAPI (swagger) 2.0 json spec to simple JS API",
+  "description": "Convert OpenAPI (swagger) 2.0 / 3.0.x definition to simple JS API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,6 +9,7 @@
   "keywords": [
     "swagger",
     "openapi",
+    "openapi3",
     "js",
     "sdk",
     "jsdoc",
@@ -16,7 +17,9 @@
   ],
   "author": "Mike Ralphson",
   "license": "BSD-3-Clause",
-  "dependencies": {},
+  "dependencies": {
+    "js-yaml": "^3.6.1"
+  },
   "devDependencies": {},
   "repository": {
     "type": "git",

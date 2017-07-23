@@ -52,22 +52,22 @@ function uniq(s) {
 function extractParameters(container,prefix) {
 	var out = '';
 	for (var sp in container) {
-		var swagParam = container[sp];
-		var pEnum = (swagParam["enum"] ? swagParam["enum"] : swagParam.schema["enum"]);
-		if (swagParam.description && ((swagParam['in'] == 'query') || pEnum)) {
-			out += '/** ' + swagParam.description + ' */\n';
+		var oasParam = container[sp];
+		var pEnum = (oasParam["enum"] ? oasParam["enum"] : (oasParam.schema ? oasParam.schema["enum"] : null));
+		if (oasParam.description && ((oasParam['in'] == 'query') || pEnum)) {
+			out += '/** ' + oasParam.description + ' */\n';
 		}
-		if (swagParam['in'] == 'query') {
-			var cName = prefix+('/'+swagParam.name).toCamelCase();
-			out += 'const ' + cName + " = '" + swagParam.name + "';\n";
+		if (oasParam['in'] == 'query') {
+			var cName = prefix+('/'+oasParam.name).toCamelCase();
+			out += 'const ' + cName + " = '" + oasParam.name + "';\n";
 			map.push(cName);
 		}
 		if (pEnum) {
 			for (var e in pEnum) {
 				var value = pEnum[e];
-				var eName = prefix+('/'+swagParam.name+'/'+value).toCamelCase();
-				if (swagParam['in'] == 'query') {
-					out += 'const ' + eName + " = '" + swagParam.name + "=" + value + "';\n";
+				var eName = prefix+('/'+oasParam.name+'/'+value).toCamelCase();
+				if (oasParam['in'] == 'query') {
+					out += 'const ' + eName + " = '" + oasParam.name + "=" + value + "';\n";
 				}
 				else {
 					out += 'const ' + eName + " = '" + value + "';\n";
@@ -143,7 +143,7 @@ module.exports = {
 										cParamName = sParam["$ref"].replace('#/parameters/','');
 										sParam = openapi.parameters[cParamName];
 									}
-									if (sParam.$ref.startsWith('#/components/parameters/')) {
+									if (sParam.$ref && sParam.$ref.startsWith('#/components/parameters/')) {
 										cParamName = sParam["$ref"].replace('#/components/parameters/','');
 										sParam = openapi.components.parameters[cParamName];
 									}
