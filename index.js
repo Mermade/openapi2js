@@ -1,8 +1,11 @@
-/* openAPI2js - generate simple Javascript API from Swagger spec suitable for use with OpenNitro SDK
+/* openAPI2js - generate simple Javascript API from openapi definition suitable for use with OpenNitro SDK
 */
 
 var fs = require('fs');
 var path = require('path');
+var url = require('url');
+
+var yaml = require('js-yaml');
 
 var map = [];
 
@@ -15,6 +18,15 @@ String.prototype.toCamelCase = function camelize() {
 function sanitise(s,brackets) {
 	s = s.replaceAll('\'','').replaceAll('(','').replaceAll(')','').replaceAll(';','');
 	if (brackets) s = s.replaceAll('{','').replaceAll('}','');
+	return s;
+}
+
+function basePath(openapi) {
+	if (openapi.basePath) return openapi.basePath;
+	var s = '/';
+	if (openapi.servers && openapi.servers.length) {
+		s = url.parse(openapi.servers[0].url).path;
+	}
 	return s;
 }
 
@@ -41,7 +53,8 @@ function extractParameters(container,prefix) {
 	var out = '';
 	for (var sp in container) {
 		var swagParam = container[sp];
-		if (swagParam.description && ((swagParam['in'] == 'query') || (swagParam['enum']))) {
+		var pEnum = (swagParam["enum"] ? swagParam["enum"] : swagParam.schema["enum"]);
+		if (swagParam.description && ((swagParam['in'] == 'query') || pEnum)) {
 			out += '/** ' + swagParam.description + ' */\n';
 		}
 		if (swagParam['in'] == 'query') {
@@ -49,9 +62,9 @@ function extractParameters(container,prefix) {
 			out += 'const ' + cName + " = '" + swagParam.name + "';\n";
 			map.push(cName);
 		}
-		if (swagParam['enum']) {
-			for (var e in swagParam['enum']) {
-				var value = swagParam['enum'][e];
+		if (pEnum) {
+			for (var e in pEnum) {
+				var value = pEnum[e];
 				var eName = prefix+('/'+swagParam.name+'/'+value).toCamelCase();
 				if (swagParam['in'] == 'query') {
 					out += 'const ' + eName + " = '" + swagParam.name + "=" + value + "';\n";
@@ -70,29 +83,32 @@ module.exports = {
 
 	openAPI2js : function(input,outfile) {
 
-		var swagger = {};
+		var openapi = {};
 		if (typeof input === 'object') {
-			swagger = input;
+			openapi = input;
 		}
 		else {
-			swagger = require(path.resolve(input));
+			openapi = yaml.safeLoad(fs.readFileSync(path.resolve(input),'utf8'),{json:true});
 		}
 		var actions = ['get','head','post','put','delete','patch','options','trace','connect'];
 		var out = '';
 
 		out += '/**\n';
 		out += '@author openapi2js http://github.com/mermade/openapi2js\n';
-		out += '@copyright Copyright (c) 2016 Mike Ralphson\n';
+		out += '@copyright Copyright (c) 2017 Mike Ralphson\n';
 		out += '@license https://opensource.org/licenses/BSD-3-Clause\n';
 		out += '*/\n';
 
-		out += extractParameters(swagger.parameters,'common');
+		out += extractParameters(openapi.parameters,'common');
+		if (openapi.components) {
+			out += extractParameters(openapi.components.parameters,'common');
+		}
 
-		for (var p in swagger.paths) {
+		for (var p in openapi.paths) {
 			pRoot = p.replace('.atom','');
 			pRoot = pRoot.replace('.xml','');
 			pRoot = pRoot.replace('.json','');
-			var sPath = swagger.paths[p];
+			var sPath = openapi.paths[p];
 
 			var pName = ('all'+pRoot).toCamelCase();
 			pName = uniq(pName);
@@ -123,12 +139,18 @@ module.exports = {
 							for (var sp in action.parameters) {
 								var sParam = action.parameters[sp];
 								if (sParam["$ref"]) {
-									cParamName = sParam["$ref"].replace('#/parameters/','');
-									sParam = swagger.parameters[cParamName];
+									if (sParam.$ref.startsWith('#/parameters/')) {
+										cParamName = sParam["$ref"].replace('#/parameters/','');
+										sParam = openapi.parameters[cParamName];
+									}
+									if (sParam.$ref.startsWith('#/components/parameters/')) {
+										cParamName = sParam["$ref"].replace('#/components/parameters/','');
+										sParam = openapi.components.parameters[cParamName];
+									}
 								}
 
 								if (sParam.name == params[arg]) {
-									pType = sParam.type;
+									pType = (sParam.type ? sParam.type : sParam.schema.type);
 									pDesc = sParam.description;
 								}
 							}
@@ -151,7 +173,7 @@ module.exports = {
 							out += (arg > 0 ? ',' : '') + params[arg].toCamelCase();
 						}
 						out += '){\n';
-						out += "  var p = '" + sanitise((swagger.basePath + p).replaceAll('//','/'),false) + "';\n";
+						out += "  var p = '" + sanitise((basePath(openapi) + p).replaceAll('//','/'),false) + "';\n";
 						for (var arg in params) {
 							out += "  p = p.replace('{" + params[arg] + "}'," + params[arg].toCamelCase() + ");\n";
 						}
@@ -159,7 +181,7 @@ module.exports = {
 						out += '}\n';
 					}
 					else {
-						out += '*/\nconst '+pName+" = '"+(swagger.basePath+p).replace('//','/')+"';\n";
+						out += '*/\nconst '+pName+" = '"+(basePath(openapi)+p).replace('//','/')+"';\n";
 					}
 					map.push(pName);
 
@@ -172,7 +194,12 @@ module.exports = {
 		for (var m in map) {
 			out += '  ' + map[m] + ' : ' + map[m] + ',\n';
 		}
-		out += "  host : '" + swagger.host + "'\n";
+		if (openapi.host) {
+			out += "  host : '" + openapi.host + "'\n";
+		}
+		if (openapi.servers) {
+			out += "  servers : " + JSON.stringify(openapi.servers) + '\n';
+		}
 		out += '};\n';
 
 		if (outfile) fs.writeFileSync(outfile,out,'utf8');
