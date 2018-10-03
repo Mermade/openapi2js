@@ -198,6 +198,10 @@ module.exports = {
 			out += "  host : '" + openapi.host + "'\n";
 		}
 		if (openapi.servers) {
+			if (openapi.servers.length > 0) {
+				let up = url.parse(openapi.servers[0].url);
+				out += "  host : '" + up.host + "',\n";
+			}
 			out += "  servers : " + JSON.stringify(openapi.servers) + '\n';
 		}
 		out += '};\n';
