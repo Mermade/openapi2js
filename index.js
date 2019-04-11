@@ -5,7 +5,7 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 
-var yaml = require('js-yaml');
+var yaml = require('yaml');
 
 var map = [];
 
@@ -88,7 +88,7 @@ module.exports = {
 			openapi = input;
 		}
 		else {
-			openapi = yaml.safeLoad(fs.readFileSync(path.resolve(input),'utf8'),{json:true});
+			openapi = yaml.parse(fs.readFileSync(path.resolve(input),'utf8'));
 		}
 		var actions = ['get','head','post','put','delete','patch','options','trace','connect'];
 		var out = '';
